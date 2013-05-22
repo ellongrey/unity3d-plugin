@@ -9,4 +9,10 @@
   <f:entry title="${%Editor command line arguments}" field="argLine">
     <f:textbox />
   </f:entry>
+  <f:entry title="${%Project path}" field="projectPath">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Log file}" field="logFile">
+    <f:textbox />
+  </f:entry>
 </j:jelly>

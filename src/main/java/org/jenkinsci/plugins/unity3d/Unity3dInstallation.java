@@ -23,6 +23,7 @@ import org.kohsuke.stapler.QueryParameter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.String;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -91,10 +92,10 @@ public class Unity3dInstallation
      * @return the number of bytes read
      * @throws IOException
      */
-    public Future<Long> pipeEditorLog(final Launcher launcher, final OutputStream ros) throws IOException {
+    public Future<Long> pipeEditorLog(final String specifiedLogFile, final Launcher launcher, final OutputStream ros) throws IOException {
         return launcher.getChannel().callAsync(new Callable<Long, IOException>() {
             public Long call() throws IOException {
-                return new PipeFileAfterModificationAction(getEditorLogFile().getAbsolutePath(), ros, true).call();
+                return new PipeFileAfterModificationAction(getEditorLogFile(specifiedLogFile).getAbsolutePath(), ros, true).call();
             }
         });
     }
@@ -106,15 +107,24 @@ public class Unity3dInstallation
      * @throws IOException
      * @throws InterruptedException
      */
-    public String getEditorLogPath(final Launcher launcher) throws IOException, InterruptedException {
+    public String getEditorLogPath(final String specifiedLogFile, final Launcher launcher) throws IOException, InterruptedException {
         return launcher.getChannel().call(new Callable<String, IOException>() {
             public String call() throws IOException {
-                return getEditorLogFile().getAbsolutePath();
+                return getEditorLogFile(specifiedLogFile).getAbsolutePath();
             }
         });
     }
 
-    private File getEditorLogFile() {
+    private File getEditorLogFile(final String specifiedLogFile) throws IOException {
+        if (!specifiedLogFile.isEmpty())
+        {
+            File theFile = new File(specifiedLogFile);
+            if (!theFile.exists())
+                theFile.createNewFile();
+
+            return theFile;
+        }
+
         if (Functions.isWindows()) {
             File applocaldata = new File(EnvVars.masterEnvVars.get("LOCALAPPDATA"));
             return new File(applocaldata, "Unity/Editor/Editor.log");

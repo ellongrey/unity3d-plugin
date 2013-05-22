@@ -2,3 +2,5 @@
 target
 *.iml
 work
+.DS_Store
+*.swp

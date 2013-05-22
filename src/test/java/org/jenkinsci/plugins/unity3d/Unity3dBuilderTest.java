@@ -49,7 +49,7 @@ public class Unity3dBuilderTest {
     }
 
     private void ensureCreateCommandlineArgs(List<String> expectedArgs1) {
-        Unity3dBuilder builder = new Unity3dBuilder("Unity 3.5", argLine);
+        Unity3dBuilder builder = new Unity3dBuilder("Unity 3.5", argLine, "", "");
         ArgumentListBuilder commandlineArgs = builder.createCommandlineArgs(exe, moduleRootRemote);
         assertEquals(expectedArgs1, commandlineArgs.toList());
     }

@@ -23,6 +23,8 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.servlet.ServletException;
 import java.io.*;
+import java.io.File;
+import java.lang.String;
 import java.util.concurrent.Future;
 
 /**
@@ -39,15 +41,29 @@ public class Unity3dBuilder extends Builder {
 
     private String unity3dName;
     private String argLine;
+    private String projectPath;
+    private String logFile;
 
     @DataBoundConstructor
-    public Unity3dBuilder(String unity3dName, String argLine) {
+    public Unity3dBuilder(String unity3dName, String argLine, String projectPath, String logFile) {
         this.unity3dName = unity3dName;
         this.argLine = argLine;
+        this.projectPath = projectPath;
+        this.logFile = logFile;
     }
 
     public String getArgLine() {
         return argLine;
+    }
+
+    public String getProjectPath()
+    {
+        return projectPath;
+    }
+
+    public String getLogFile()
+    {
+        return logFile;
     }
 
     public String getUnity3dName() {
@@ -85,9 +101,15 @@ public class Unity3dBuilder extends Builder {
 
         Pipe pipe = Pipe.createRemoteToLocal(launcher);
 
+        FilePath moduleRoot = build.getModuleRoot();
+        String moduleRootRemote = moduleRoot.getRemote();
+        String specifiedLogFile = logFile.isEmpty() ? "" : new File(moduleRootRemote, logFile).getAbsolutePath();
+
         PrintStream ca = listener.getLogger();
-        ca.println("Piping unity Editor.log from " + ui.getEditorLogPath(launcher));
-        Future<Long> futureReadBytes = ui.pipeEditorLog(launcher, pipe.getOut());
+
+        String editorLogPath = ui.getEditorLogPath(specifiedLogFile, launcher);
+        ca.println("Piping unity Editor.log from " + editorLogPath);
+        Future<Long> futureReadBytes = ui.pipeEditorLog(specifiedLogFile, launcher, pipe.getOut());
         // Unity3dConsoleAnnotator ca = new Unity3dConsoleAnnotator(listener.getLogger(), build.getCharset());
 
         StreamCopyThread copierThread = new StreamCopyThread("Pipe editor.log to output thread.", pipe.getIn(), ca);
@@ -148,7 +170,15 @@ public class Unity3dBuilder extends Builder {
         ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(exe);
         if (!argLine.contains("-projectPath")) {
-           args.add("-projectPath", moduleRootRemote);
+            if (projectPath.isEmpty())
+                args.add("-projectPath", moduleRootRemote);
+            else
+                args.add("-projectPath", projectPath);
+        }
+        if (!argLine.contains("-logFile"))
+        {
+            if (!logFile.isEmpty())
+                args.add("-logFile", new File(moduleRootRemote, logFile).getAbsolutePath());
         }
         args.add(QuotedStringTokenizer.tokenize(argLine));
         return args;
