@@ -14,6 +14,7 @@ import static org.junit.Assert.assertEquals;
 public class Unity3dBuilderTest {
 
     private String exe = "/Applications/Unity/Unity.app";
+    private String workspaceRootRemote = "/Users/Shared/Jenkins/Home/jobs/project1";
     private String moduleRootRemote = "/Users/Shared/Jenkins/Home/jobs/project1/workspace";
 
     private String argLine;
@@ -50,7 +51,7 @@ public class Unity3dBuilderTest {
 
     private void ensureCreateCommandlineArgs(List<String> expectedArgs1) {
         Unity3dBuilder builder = new Unity3dBuilder("Unity 3.5", argLine, "", "");
-        ArgumentListBuilder commandlineArgs = builder.createCommandlineArgs(exe, moduleRootRemote);
+        ArgumentListBuilder commandlineArgs = builder.createCommandlineArgs(exe, workspaceRootRemote, moduleRootRemote);
         assertEquals(expectedArgs1, commandlineArgs.toList());
     }
 }

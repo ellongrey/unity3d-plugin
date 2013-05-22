@@ -101,9 +101,9 @@ public class Unity3dBuilder extends Builder {
 
         Pipe pipe = Pipe.createRemoteToLocal(launcher);
 
-        FilePath moduleRoot = build.getModuleRoot();
-        String moduleRootRemote = moduleRoot.getRemote();
-        String specifiedLogFile = logFile.isEmpty() ? "" : new File(moduleRootRemote, logFile).getAbsolutePath();
+        FilePath workspaceRoot = build.getWorkspace();
+        String workspaceRootRemote = workspaceRoot.getRemote();
+        String specifiedLogFile = logFile.isEmpty() ? "" : new File(workspaceRootRemote, logFile).getAbsolutePath();
 
         PrintStream ca = listener.getLogger();
 
@@ -151,7 +151,10 @@ public class Unity3dBuilder extends Builder {
         FilePath moduleRoot = build.getModuleRoot();
         String moduleRootRemote = moduleRoot.getRemote();
 
-        return createCommandlineArgs(exe, moduleRootRemote);
+        FilePath workspaceRoot = build.getWorkspace();
+        String workspaceRootRemote = workspaceRoot.getRemote();
+
+        return createCommandlineArgs(exe, workspaceRootRemote, moduleRootRemote);
     }
 
     private Unity3dInstallation getAndConfigureUnity3dInstallation(BuildListener listener, EnvVars env) throws PerformException, IOException, InterruptedException {
@@ -166,7 +169,7 @@ public class Unity3dBuilder extends Builder {
         return ui;
     }
 
-    ArgumentListBuilder createCommandlineArgs(String exe, String moduleRootRemote) {
+    ArgumentListBuilder createCommandlineArgs(String exe, String workspaceRemote, String moduleRootRemote) {
         ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(exe);
         if (!argLine.contains("-projectPath")) {
@@ -178,7 +181,7 @@ public class Unity3dBuilder extends Builder {
         if (!argLine.contains("-logFile"))
         {
             if (!logFile.isEmpty())
-                args.add("-logFile", new File(moduleRootRemote, logFile).getAbsolutePath());
+                args.add("-logFile", new File(workspaceRemote, logFile).getAbsolutePath());
         }
         args.add(QuotedStringTokenizer.tokenize(argLine));
         return args;
