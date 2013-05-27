@@ -99,29 +99,49 @@ public class Unity3dBuilder extends Builder {
 
         ArgumentListBuilder args = prepareCommandlineArguments(build, launcher, ui);
 
-        Pipe pipe = Pipe.createRemoteToLocal(launcher);
-
-        FilePath workspaceRoot = build.getWorkspace();
-        String workspaceRootRemote = workspaceRoot.getRemote();
-        String specifiedLogFile = logFile.isEmpty() ? "" : new File(workspaceRootRemote, logFile).getAbsolutePath();
-
+        Future<Long> futureReadBytes = null;
+        StreamCopyThread copierThread = null;
         PrintStream ca = listener.getLogger();
 
-        String editorLogPath = ui.getEditorLogPath(specifiedLogFile, launcher);
-        ca.println("Piping unity Editor.log from " + editorLogPath);
-        Future<Long> futureReadBytes = ui.pipeEditorLog(specifiedLogFile, launcher, pipe.getOut());
-        // Unity3dConsoleAnnotator ca = new Unity3dConsoleAnnotator(listener.getLogger(), build.getCharset());
+        if (logFile != null && !logFile.isEmpty())
+        {
+            Pipe pipe = Pipe.createRemoteToLocal(launcher);
 
-        StreamCopyThread copierThread = new StreamCopyThread("Pipe editor.log to output thread.", pipe.getIn(), ca);
+            FilePath workspaceRoot = build.getWorkspace();
+            String workspaceRootRemote = workspaceRoot.getRemote();
+            String specifiedLogFile = logFile.isEmpty() ? "" : new File(workspaceRootRemote, logFile).getAbsolutePath();
+
+            String editorLogPath = ui.getEditorLogPath(specifiedLogFile, launcher);
+            ca.println("Piping unity Editor.log from " + editorLogPath);
+            futureReadBytes = ui.pipeEditorLog(specifiedLogFile, launcher, pipe.getOut());
+            // Unity3dConsoleAnnotator ca = new Unity3dConsoleAnnotator(listener.getLogger(), build.getCharset());
+
+            copierThread = new StreamCopyThread("Pipe editor.log to output thread.", pipe.getIn(), ca);
+        }
+        else
+        {
+            ca.println("No logPath specified - igonring editor.log and just wait for unity process to be end");
+        }
+
         try {
-            copierThread.start();
-            int r = launcher.launch().cmds(args).envs(env).stdout(ca).pwd(build.getWorkspace()).join();
+            int r = -1;
+
+            if (copierThread != null)
+            {
+                copierThread.start();
+                r = launcher.launch().cmds(args).envs(env).stdout(ca).pwd(build.getWorkspace()).join();
+            }
+            else
+            {
+                r = launcher.launch().cmds(args).envs(env).pwd(build.getWorkspace()).join();
+            }
+
             // r == 11 means executeMethod could not be found ?
             if (r != 0) {
                 throw new PerformException(Messages.Unity3d_UnityExecFailed(r));
             }
         } finally {
-            if (!futureReadBytes.isDone()) {
+            if (futureReadBytes != null && !futureReadBytes.isDone()) {
                 // NOTE According to the API, cancel() should cause future calls to get() to fail with an exception
                 // Jenkins implementation doesn't seem to record it right now and just interrupts the remote task
                 // but we won't use the value, in case that behavior changes, even for debugging / informative purposes
@@ -130,10 +150,13 @@ public class Unity3dBuilder extends Builder {
                 // listener.getLogger().print("Read " + futureReadBytes.get() + " bytes from Editor.log");
             }
             try {
-                copierThread.join();
-                if (copierThread.getFailure() != null) {
-                   ca.println("Failure on remote ");
-                   copierThread.getFailure().printStackTrace(ca);
+                if (copierThread != null)
+                {
+                    copierThread.join();
+                    if (copierThread.getFailure() != null) {
+                       ca.println("Failure on remote ");
+                       copierThread.getFailure().printStackTrace(ca);
+                    }
                 }
             }
             finally {
